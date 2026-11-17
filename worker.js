@@ -1,4 +1,4 @@
-// Akış TV aracı sunucusu (Cloudflare Worker)
+// IPTV aracı sunucusu (Cloudflare Worker)
 // Ortam değişkeni: TOKEN (gizli anahtar). İstek: /?k=TOKEN&u=<kodlanmış hedef url>
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Expose-Headers':'*'};
 export default {
