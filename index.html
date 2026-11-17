@@ -102,6 +102,9 @@ label.file{display:block}
     <div class="row"><input id="xu" placeholder="Kullanıcı adı" autocapitalize="off" autocorrect="off"><input id="xp" type="password" placeholder="Şifre"></div>
     <div class="btn" id="xlogin">Giriş yap</div>
     <div id="msg" class="err"></div>
+    <div class="hint">Aracı sunucu (http sunucular için, isteğe bağlı):</div>
+    <input id="pxu" type="url" placeholder="Proxy adresi (https://….workers.dev)" autocapitalize="off" autocorrect="off">
+    <input id="pxk" type="password" placeholder="Proxy anahtarı">
     <h2 style="margin-top:6px">veya M3U listesi</h2>
     <input id="url" type="url" placeholder="M3U / M3U8 liste bağlantısı (https://…)">
     <div class="row"><div class="btn" id="load" style="flex:1">Yükle</div><div class="btn alt" id="close">Kapat</div></div>
@@ -122,6 +125,9 @@ const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let channels=[],view=[],cat='Tümü',cur=-1,favs=new Set(LS.get('favs',[])),hls=null;
 const vid=$('#v');
+let proxy=LS.get('proxy',null);
+const px=u=>(proxy&&proxy.url&&/^http:/i.test(u))?`${proxy.url}/?k=${encodeURIComponent(proxy.key)}&u=${encodeURIComponent(u)}`:u;
+const pxAll=u=>proxy&&proxy.url?`${proxy.url}/?k=${encodeURIComponent(proxy.key)}&u=${encodeURIComponent(u)}`:u;
 
 function parseM3U(text){
   const out=[];let meta=null;
@@ -179,7 +185,7 @@ function render(resetCat){
   view.slice(0,MAX).forEach((c,i)=>{
     const d=document.createElement('div');d.className='ch'+(cur>=0&&channels[cur]===c?' cur':'');
     const lg=document.createElement('div');lg.className='logo';
-    if(c.logo){const im=new Image();im.loading='lazy';im.referrerPolicy='no-referrer';im.src=c.logo;im.onerror=()=>{lg.textContent=c.name[0]||'?'};lg.appendChild(im)}else lg.textContent=c.name[0]||'?';
+    if(c.logo){const im=new Image();im.loading='lazy';im.referrerPolicy='no-referrer';im.src=px(c.logo);im.onerror=()=>{lg.textContent=c.name[0]||'?'};lg.appendChild(im)}else lg.textContent=c.name[0]||'?';
     const t=document.createElement('div');t.className='t';t.innerHTML='<div class="n"></div><div class="g"></div>';
     t.firstChild.textContent=c.name;t.lastChild.textContent=c.group;
     const f=document.createElement('button');f.className='fav'+(favs.has(c.id)?' on':'');f.textContent='★';
@@ -198,12 +204,12 @@ function play(i){
   cur=i;const c=channels[i];LS.set('last',c.id);
   $('#player').classList.remove('idle');$('#idle').classList.add('hidden');
   $('#nowbar').classList.remove('hidden');$('#nowname').textContent=c.name;
-  const nl=$('#nowlogo');nl.style.display=c.logo?'':'none';nl.src=c.logo||'';nl.onerror=()=>nl.style.display='none';
+  const nl=$('#nowlogo');nl.style.display=c.logo?'':'none';nl.src=c.logo?px(c.logo):'';nl.onerror=()=>nl.style.display='none';
   $('#mid').textContent=c.name;
   if('mediaSession' in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:c.name,artist:c.group,artwork:c.logo?[{src:c.logo}]:[]})}catch(e){}}
   if(hls){hls.destroy();hls=null}
   status(true);
-  const u=c.url,isHls=/\.m3u8?(\?|$)/i.test(u)||/\/(live|hls)\b/i.test(u);
+  const u=px(c.url),isHls=/\.m3u8?(\?|$)/i.test(u)||/\/(live|hls)\b/i.test(u);
   if(window.Hls&&Hls.isSupported()&&isHls){
     hls=new Hls({maxBufferLength:20,enableWorker:true,lowLatencyMode:false});
     hls.loadSource(u);hls.attachMedia(vid);
@@ -238,7 +244,7 @@ if('mediaSession' in navigator){try{navigator.mediaSession.setActionHandler('nex
 /* sheet */
 const sheet=$('#sheet'),msg=$('#msg');
 new MutationObserver(()=>{if(msg.textContent)msg.scrollIntoView({block:'center'})}).observe(msg,{childList:true,characterData:true,subtree:true});
-$('#set').onclick=()=>{$('#url').value=LS.get('src','');msg.textContent='';sheet.classList.remove('hidden')};
+$('#set').onclick=()=>{$('#url').value=LS.get('src','');if(proxy){$('#pxu').value=proxy.url;$('#pxk').value=proxy.key}msg.textContent='';sheet.classList.remove('hidden')};
 $('#close').onclick=()=>sheet.classList.add('hidden');
 sheet.onclick=e=>{if(e.target===sheet)sheet.classList.add('hidden')};
 async function run(fn,src){
@@ -251,9 +257,9 @@ async function xtream(server,user,pass){
   const api=a=>`${server}/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&action=${a}`;
   const get=async a=>{
     let u=api(a);
-    try{const r=await fetch(u);return await r.json()}
+    try{const r=await fetch(proxy&&proxy.url?pxAll(u):u);return await r.json()}
     catch(e){
-      if(location.protocol==='https:'&&server.startsWith('http:')){
+      if(!(proxy&&proxy.url)&&location.protocol==='https:'&&server.startsWith('http:')){
         // http sunucu https sayfadan engellenir; https dene
         try{const r=await fetch(u.replace(/^http:/,'https:'));const j=await r.json();server=server.replace(/^http:/,'https:');return j}catch(e2){}
         throw new Error('Sunucu http, uygulama https olduğu için tarayıcı bağlantıyı engelliyor (veya sunucu CORS izni vermiyor).');
@@ -276,6 +282,8 @@ async function xLogin(s,u,p){
 $('#xlogin').onclick=async()=>{
   const s=$('#xs').value,u=$('#xu').value.trim(),p=$('#xp').value;
   if(!s||!u||!p){msg.textContent='Üç alanı da doldur.';return}
+  const pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();
+  proxy=pu?{url:pu,key:pk}:null;LS.set('proxy',proxy);
   msg.textContent='Giriş yapılıyor…';
   try{await xLogin(s,u,p);msg.textContent='';sheet.classList.add('hidden')}
   catch(e){msg.textContent='Hata: '+e.message}
