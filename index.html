@@ -99,7 +99,8 @@ label.file{display:block}
   <div class="box">
     <h2>Xtream Codes girişi</h2>
     <input id="xs" type="url" placeholder="Sunucu (http://ornek.com:8080)" autocapitalize="off" autocorrect="off">
-    <div class="row"><input id="xu" placeholder="Kullanıcı adı" autocapitalize="off" autocorrect="off"><input id="xp" type="password" placeholder="Şifre"></div>
+    <div class="row"><input id="xu" placeholder="Kullanıcı adı" autocapitalize="off" autocorrect="off"><input id="xp" type="password" autocapitalize="off" autocorrect="off" placeholder="Şifre"></div>
+    <label class="hint"><input type="checkbox" id="xshow" style="width:auto;margin-right:6px">Şifreyi göster</label>
     <div class="btn" id="xlogin">Giriş yap</div>
     <div id="msg" class="err"></div>
     <div class="hint">Aracı sunucu (http sunucular için, isteğe bağlı):</div>
@@ -254,21 +255,25 @@ async function run(fn,src){
 }
 async function xtream(server,user,pass){
   server=server.trim().replace(/\/+$/,'');if(!/^https?:\/\//i.test(server))server='http://'+server;
-  const api=a=>`${server}/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&action=${a}`;
+  const api=a=>`${server}/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`+(a?`&action=${a}`:'');
   const get=async a=>{
-    let u=api(a);
-    try{const r=await fetch(proxy&&proxy.url?pxAll(u):u);return await r.json()}
+    const u=api(a);let r,t;
+    try{r=await fetch(proxy&&proxy.url?pxAll(u):u);t=await r.text()}
     catch(e){
-      if(!(proxy&&proxy.url)&&location.protocol==='https:'&&server.startsWith('http:')){
-        // http sunucu https sayfadan engellenir; https dene
-        try{const r=await fetch(u.replace(/^http:/,'https:'));const j=await r.json();server=server.replace(/^http:/,'https:');return j}catch(e2){}
-        throw new Error('Sunucu http, uygulama https olduğu için tarayıcı bağlantıyı engelliyor (veya sunucu CORS izni vermiyor).');
-      }
-      throw new Error('Sunucuya bağlanılamadı (adres/port yanlış ya da sunucu CORS izni vermiyor).');
+      if(!(proxy&&proxy.url)&&location.protocol==='https:'&&server.startsWith('http:'))
+        throw new Error('Sunucu http, uygulama https olduğu için tarayıcı bağlantıyı engelliyor. Proxy adresini gir.');
+      throw new Error('Sunucuya bağlanılamadı (adres/port yanlış, proxy yok ya da sunucu CORS izni vermiyor).');
     }
+    if(r.status===401)throw new Error('Proxy anahtarı hatalı.');
+    try{return JSON.parse(t)}catch(e){throw new Error('Sunucu beklenmeyen yanıt verdi (HTTP '+r.status+'): '+t.replace(/\s+/g,' ').slice(0,100))}
   };
+  const info=await get('');
+  const ui=info&&info.user_info;
+  if(!ui)throw new Error('Bu adres bir Xtream sunucusu gibi yanıt vermedi.');
+  if(String(ui.auth)==='0')throw new Error('Sunucu girişi reddetti (auth=0): kullanıcı adı veya şifre hatalı'+(ui.message?' — '+ui.message:'')+'.');
+  if(ui.status&&ui.status!=='Active'){const ex=ui.exp_date?new Date(ui.exp_date*1000).toLocaleDateString('tr-TR'):'?';throw new Error('Hesap durumu: '+ui.status+' (bitiş: '+ex+').')}
   const [cats,streams]=await Promise.all([get('get_live_categories'),get('get_live_streams')]);
-  if(!Array.isArray(streams))throw new Error('Giriş başarısız: kullanıcı adı/şifre hatalı veya hesap süresi dolmuş.');
+  if(!Array.isArray(streams))throw new Error('Giriş yapıldı ama kanal listesi gelmedi: '+JSON.stringify(streams).slice(0,100));
   const cm={};(Array.isArray(cats)?cats:[]).forEach(c=>cm[c.category_id]=c.category_name);
   const l=streams.map(s=>({name:s.name||'Kanal',logo:s.stream_icon||'',group:cm[s.category_id]||'Diğer',url:`${server}/live/${encodeURIComponent(user)}/${encodeURIComponent(pass)}/${s.stream_id}.m3u8`}));
   if(!l.length)throw new Error('Hesapta canlı kanal bulunamadı.');
@@ -279,8 +284,9 @@ async function xLogin(s,u,p){
   setChannels(l);LS.set('x',{s,u,p});LS.set('src','');
   try{localStorage.removeItem('m3u')}catch(e){}
 }
+$('#xshow').onchange=e=>{$('#xp').type=e.target.checked?'text':'password'};
 $('#xlogin').onclick=async()=>{
-  const s=$('#xs').value,u=$('#xu').value.trim(),p=$('#xp').value;
+  const s=$('#xs').value,u=$('#xu').value.trim(),p=$('#xp').value.trim();
   if(!s||!u||!p){msg.textContent='Üç alanı da doldur.';return}
   const pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();
   proxy=pu?{url:pu,key:pk}:null;LS.set('proxy',proxy);
