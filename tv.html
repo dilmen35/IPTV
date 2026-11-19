@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>IPTV TV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#07080c;--pan:rgba(10,12,18,.93);--card:#161a24;--card2:#222838;--txt:#eef1f7;--mut:#8b93a7;--acc:#ff4d6d;--acc2:#7c5cff}
+*{box-sizing:border-box}
+html{font-size:1.25vw}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);font-family:"Segoe UI",Roboto,Arial,sans-serif;cursor:default}
+.hidden{display:none!important}
+#v{position:fixed;left:0;top:0;width:100%;height:100%;background:#000;object-fit:contain}
+#splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;background:radial-gradient(circle at 30% 20%,#1b1f33,#07080c);color:var(--mut);font-size:1.3rem}
+#splash b{font-size:4rem;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* banner */
+#banner{position:fixed;left:3rem;right:3rem;bottom:2.5rem;display:flex;align-items:center;gap:1.5rem;padding:1.2rem 1.8rem;border-radius:1.2rem;background:var(--pan);box-shadow:0 .5rem 3rem #000a;transition:opacity .3s}
+#banner.off{opacity:0}
+#banner.side{left:64%;right:2rem;top:2rem;bottom:auto;flex-wrap:wrap}
+#banner.side #bmsg{max-width:100%;margin-left:0;text-align:left}
+#bnum{font-size:2.6rem;font-weight:700;color:var(--acc2);min-width:4.5rem;text-align:center}
+#blogo{width:5rem;height:5rem;border-radius:.8rem;background:#ffffff12;object-fit:contain}
+#bname{font-size:2rem;font-weight:700}
+#bgrp{color:var(--mut);font-size:1.2rem;margin-top:.2rem}
+#bmsg{margin-left:auto;font-size:1.2rem;color:#ffc542;text-align:right;max-width:40%}
+.spin{width:2.6rem;height:2.6rem;border:.3rem solid #fff3;border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+#numbox{position:fixed;right:3rem;top:2.5rem;padding:.8rem 1.6rem;border-radius:1rem;background:var(--pan);font-size:3rem;font-weight:700}
+
+/* browse panel */
+#browse{position:fixed;left:0;top:0;bottom:0;width:62%;display:flex;background:linear-gradient(90deg,var(--pan) 80%,transparent);padding:2rem 0 2rem 2rem}
+#cats{width:16rem;flex:none;display:flex;flex-direction:column;gap:.35rem;overflow:hidden;padding-right:1rem}
+#list{flex:1;display:flex;flex-direction:column;gap:.35rem;overflow:hidden;padding-right:4rem}
+.it{display:flex;align-items:center;gap:1rem;padding:.55rem .9rem;border-radius:.8rem;font-size:1.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:.18rem solid transparent;flex:none}
+.cat{color:var(--mut);height:3rem}
+.cat.sel{color:var(--txt);background:var(--card)}
+.ch{background:var(--card);height:4rem}
+.ch .no{width:3rem;text-align:right;color:var(--mut);flex:none}
+.ch img,.ch .ph{width:2.8rem;height:2.8rem;border-radius:.5rem;object-fit:contain;background:#ffffff10;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mut);font-weight:700}
+.ch .nm{flex:1;overflow:hidden;text-overflow:ellipsis}
+.ch .st{color:#ffc542;flex:none}
+.ch.play{background:var(--card2)}
+.ch.play .nm{color:#fff}
+.foc{border-color:#fff!important;background:linear-gradient(90deg,var(--acc),var(--acc2))!important;color:#fff!important;transform:scale(1.02)}
+.foc .no{color:#fff}
+#info{position:fixed;left:2rem;bottom:.6rem;font-size:1rem;color:var(--mut)}
+#info span{margin-right:1.5rem}
+.key{display:inline-block;width:.9rem;height:.9rem;border-radius:50%;vertical-align:middle;margin-right:.3rem}
+#empty{color:var(--mut);font-size:1.3rem;padding:2rem}
+#count{color:var(--mut);font-size:1rem;padding:.2rem .9rem}
+
+/* settings */
+#set{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center}
+#set .box{width:56rem;max-height:94%;overflow:hidden;background:#10131b;border-radius:1.5rem;padding:2rem 2.5rem;display:flex;flex-direction:column;gap:.8rem}
+#set h2{margin:0 0 .3rem;font-size:1.8rem}
+#set label{font-size:1rem;color:var(--mut);margin-bottom:-.5rem}
+#set input{font:inherit;font-size:1.3rem;color:var(--txt);background:var(--card);border:.18rem solid #262c3b;border-radius:.8rem;padding:.7rem 1rem;width:100%;outline:none}
+#set input.foc{transform:none;background:var(--card2)!important}
+.row{display:flex;gap:1rem}
+.btn{flex:1;padding:.9rem;border-radius:.8rem;background:var(--card2);font-weight:600;font-size:1.3rem;text-align:center;border:.18rem solid transparent}
+#smsg{font-size:1.15rem;color:#ff8a8a;min-height:1.5rem}
+.hint{font-size:1rem;color:var(--mut)}
+#sq{position:fixed;left:18rem;top:.6rem;width:30rem;z-index:5;}
+#q{font:inherit;font-size:1.3rem;color:var(--txt);background:var(--card);border:.18rem solid #fff;border-radius:.8rem;padding:.6rem 1rem;margin-bottom:.4rem;outline:none;width:100%}
+</style>
+</head>
+<body>
+<video id="v" autoplay playsinline></video>
+<div id="splash"><b>IPTV</b><span id="splmsg">Yükleniyor…</span></div>
+
+<div id="banner" class="off">
+  <div id="bnum"></div><img id="blogo" alt="">
+  <div><div id="bname"></div><div id="bgrp"></div></div>
+  <div id="bmsg"></div>
+</div>
+<div id="numbox" class="hidden"></div>
+<input id="sq" class="hidden" placeholder="Kanal ara…" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+<div id="browse" class="hidden">
+  <div id="cats"></div>
+  <div id="list"></div>
+</div>
+<div id="info" class="hidden">
+  <span>▲▼ Gez</span><span>◄► Kategori / Liste</span><span>OK İzle</span>
+  <span><i class="key" style="background:#e33"></i>Favori</span>
+  <span><i class="key" style="background:#2b2"></i>Ayarlar</span>
+  <span><i class="key" style="background:#ec2"></i>Ara</span>
+  <span>Geri: Kapat</span>
+</div>
+
+<div id="set" class="hidden">
+  <div class="box">
+    <h2>Xtream Codes girişi</h2>
+    <label>Sunucu</label><input class="f" readonly id="xs" placeholder="http://ornek.com:8080" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="row">
+      <div style="flex:1;display:flex;flex-direction:column;gap:.8rem"><label>Kullanıcı adı</label><input class="f" readonly id="xu" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:.8rem"><label>Şifre</label><input class="f" readonly id="xp" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    </div>
+    <label>Aracı sunucu (proxy) adresi — gerekirse</label><input class="f" readonly id="pxu" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label>Proxy anahtarı</label><input class="f" readonly id="pxk" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div id="smsg"></div>
+    <div class="row"><div class="btn f" id="xlogin">Giriş yap</div><div class="btn f" id="xclose">Kapat</div><div class="btn f" id="xclear">Verileri sil</div></div>
+    <div class="hint">Önce doğrudan bağlanmayı dener, olmazsa proxy'yi kullanır. Bilgiler sadece bu TV'de saklanır.</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
+<script>
+var $=function(s){return document.querySelector(s)};
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+var vid=$('#v');
+var channels=[],cats=[],view=[],favs=new Set(LS.get('tvfavs',[]));
+var cur=-1,hls=null,retries=0;
+var proxy=LS.get('proxy',null);          // {url,key}
+var direct=LS.get('tvdirect',true);      // sunucuya doğrudan ulaşılabiliyor mu
+var DEFAULT_PROXY='https://iptv-proxy.dilmenseref.workers.dev';
+var mode='watch';                        // watch | browse | settings
+var zone='list', catIdx=0, listIdx=0, listTop=0, setIdx=0, query='';
+var ROWS=8, CROWS=11;
+function fit(){var rem=innerWidth/80;ROWS=Math.max(4,Math.floor((innerHeight/rem-9)/4.35));CROWS=Math.max(4,Math.floor((innerHeight/rem-6)/3.35))}
+fit();addEventListener('resize',function(){fit();if(mode==='browse')draw()});
+
+function viaProxy(u){return proxy&&proxy.url?proxy.url+'/?k='+encodeURIComponent(proxy.key)+'&u='+encodeURIComponent(u):u}
+function streamUrl(u){return (!direct&&/^http:/i.test(u))?viaProxy(u):u}
+function imgUrl(u){return (location.protocol==='https:'&&/^http:/i.test(u)&&proxy&&proxy.url)?viaProxy(u):u}
+
+/* ---------- Xtream ---------- */
+function fetchText(u){return fetch(u).then(function(r){return r.text().then(function(t){return {status:r.status,text:t}})})}
+function xtream(server,user,pass){
+  server=server.trim().replace(/\/+$/,'');if(!/^https?:\/\//i.test(server))server='http://'+server;
+  var api=function(a){return server+'/player_api.php?username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass)+(a?'&action='+a:'')};
+  var useProxy=false;
+  function get(a){
+    var u=api(a);
+    var tryDirect=useProxy?Promise.reject('skip'):fetchText(u);
+    return tryDirect.catch(function(){
+      if(!(proxy&&proxy.url))throw new Error('Sunucuya doğrudan bağlanılamadı. Proxy adresini ve anahtarını gir.');
+      useProxy=true;
+      return fetchText(viaProxy(u)).catch(function(){throw new Error('Proxy üzerinden de bağlanılamadı.')});
+    }).then(function(r){
+      if(r.status===401&&useProxy)throw new Error('Proxy anahtarı hatalı.');
+      try{return JSON.parse(r.text)}catch(e){throw new Error('Sunucu beklenmeyen yanıt verdi (HTTP '+r.status+'): '+r.text.replace(/\s+/g,' ').slice(0,90))}
+    });
+  }
+  return get('').then(function(info){
+    var ui=info&&info.user_info;
+    if(!ui)throw new Error('Bu adres Xtream sunucusu gibi yanıt vermedi.');
+    if(String(ui.auth)==='0')throw new Error('Sunucu girişi reddetti (auth=0): kullanıcı adı veya şifre hatalı'+(ui.message?' — '+ui.message:'')+(useProxy?' (proxy üzerinden denendi; sağlayıcı Cloudflare\'i engelliyor olabilir)':'')+'.');
+    if(ui.status&&ui.status!=='Active'){var ex=ui.exp_date?new Date(ui.exp_date*1000).toLocaleDateString('tr-TR'):'?';throw new Error('Hesap durumu: '+ui.status+' (bitiş: '+ex+').')}
+    return Promise.all([get('get_live_categories'),get('get_live_streams')]);
+  }).then(function(res){
+    var cs=res[0],ss=res[1];
+    if(!Array.isArray(ss))throw new Error('Kanal listesi gelmedi.');
+    var cm={},order=[];(Array.isArray(cs)?cs:[]).forEach(function(c){cm[c.category_id]=c.category_name;order.push(c.category_name)});
+    var l=ss.map(function(s,i){return {num:i+1,id:String(s.stream_id),name:s.name||'Kanal',logo:s.stream_icon||'',group:cm[s.category_id]||'Diğer',
+      url:server+'/live/'+encodeURIComponent(user)+'/'+encodeURIComponent(pass)+'/'+s.stream_id+'.m3u8'}});
+    if(!l.length)throw new Error('Hesapta canlı kanal yok.');
+    return {list:l,order:order,direct:!useProxy};
+  });
+}
+function applyList(r){
+  channels=r.list;direct=r.direct;LS.set('tvdirect',direct);
+  var seen={};cats=['Tümü','★ Favoriler'];
+  r.order.concat(channels.map(function(c){return c.group})).forEach(function(g){if(!seen[g]&&channels.some(function(c){return c.group===g})){seen[g]=1;cats.push(g)}});
+  catIdx=0;filter();
+}
+
+/* ---------- liste ---------- */
+function filter(){
+  var c=cats[catIdx]||'Tümü',q=query.toLocaleLowerCase('tr');
+  view=channels.filter(function(x){return (c==='Tümü'||(c==='★ Favoriler'?favs.has(x.id):x.group===c))&&(!q||x.name.toLocaleLowerCase('tr').indexOf(q)>=0)});
+  listIdx=0;listTop=0;
+  if(cur>=0){var i=view.indexOf(channels[cur]);if(i>=0)listIdx=i}
+  draw();
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
+function draw(){
+  // kategoriler
+  var ct=Math.max(0,Math.min(catIdx-Math.floor(CROWS/2),cats.length-CROWS));
+  $('#cats').innerHTML=cats.slice(ct,ct+CROWS).map(function(g,k){var i=ct+k;
+    return '<div class="it cat'+(i===catIdx?' sel':'')+(zone==='cats'&&i===catIdx?' foc':'')+'" data-c="'+i+'">'+esc(g)+'</div>'}).join('');
+  // kanallar
+  if(listIdx<listTop)listTop=listIdx;
+  if(listIdx>=listTop+ROWS)listTop=listIdx-ROWS+1;
+  var h=query?'<input id="q" value="'+esc(query)+'" readonly>':'';
+  h+='<div id="count">'+esc(cats[catIdx]||'')+' · '+view.length+' kanal'+(query?' · "'+esc(query)+'"':'')+'</div>';
+  if(!view.length)h+='<div id="empty">'+(channels.length?'Kanal yok.':'Liste yok. Yeşil tuşla ayarları aç.')+'</div>';
+  h+=view.slice(listTop,listTop+ROWS).map(function(c,k){var i=listTop+k;
+    var lg=c.logo?'<img src="'+esc(imgUrl(c.logo))+'" onerror="this.outerHTML=\'<div class=ph>'+esc(c.name[0]||'?')+'</div>\'">':'<div class="ph">'+esc(c.name[0]||'?')+'</div>';
+    return '<div class="it ch'+(channels[cur]===c?' play':'')+(zone==='list'&&i===listIdx?' foc':'')+'" data-i="'+i+'"><span class="no">'+c.num+'</span>'+lg+'<span class="nm">'+esc(c.name)+'</span>'+(favs.has(c.id)?'<span class="st">★</span>':'')+'</div>'}).join('');
+  $('#list').innerHTML=h;
+}
+
+/* ---------- oynatma ---------- */
+var bannerT;
+function banner(msg,keep){
+  var c=channels[cur];if(!c)return;
+  $('#bnum').textContent=c.num;$('#bname').textContent=c.name;$('#bgrp').textContent=c.group;
+  var bl=$('#blogo');bl.style.display=c.logo?'':'none';bl.src=c.logo?imgUrl(c.logo):'';bl.onerror=function(){bl.style.display='none'};
+  $('#bmsg').innerHTML=msg||'';
+  $('#banner').classList.remove('off');clearTimeout(bannerT);
+  if(!keep)bannerT=setTimeout(function(){$('#banner').classList.add('off')},4500);
+}
+function play(i){
+  if(i<0||i>=channels.length)return;
+  cur=i;retries=0;var c=channels[i];LS.set('tvlast',c.id);
+  $('#splash').classList.add('hidden');
+  banner('<div class="spin" style="margin-left:auto"></div>',true);
+  if(hls){hls.destroy();hls=null}
+  vid.removeAttribute('src');
+  startHls(streamUrl(c.url),c);
+  if(mode==='browse')draw();
+}
+function startHls(u,c){
+  if(!(window.Hls&&Hls.isSupported())){nativePlay(u);return}
+  var h=hls=new Hls({maxBufferLength:30,enableWorker:true});
+  h.loadSource(u);h.attachMedia(vid);
+  h.on(Hls.Events.MANIFEST_PARSED,function(){vid.play().catch(needOk)});
+  h.on(Hls.Events.ERROR,function(_,d){
+    if(!d.fatal||h!==hls)return;
+    if(d.type===Hls.ErrorTypes.MEDIA_ERROR&&retries<2){retries++;h.recoverMediaError();return}
+    if(d.type===Hls.ErrorTypes.NETWORK_ERROR&&retries<2){retries++;setTimeout(function(){if(h===hls)h.startLoad()},1000);return}
+    if(u===c.url&&/^http:/i.test(c.url)&&proxy&&proxy.url){h.destroy();hls=null;retries=0;startHls(viaProxy(c.url),c);return}
+    fail('Kanal açılamadı');
+  });
+}
+function nativePlay(u){vid.src=u;vid.load();vid.play().catch(needOk)}
+function needOk(e){if(e&&e.name==='NotAllowedError')banner('Başlatmak için OK\'e bas',true)}
+function fail(m){banner('⚠ '+m+'<br><small>Yayın kapalı olabilir veya sunucu izin vermiyor</small>',true)}
+vid.addEventListener('playing',function(){banner('')});
+vid.addEventListener('error',function(){if(cur>=0&&!hls)fail('Kanal açılamadı')});
+function zap(d){
+  var arr=view.length&&cats[catIdx]!=='Tümü'?view:channels;if(!arr.length)return;
+  var i=arr.indexOf(channels[cur]);var n=arr[(i+d+arr.length)%arr.length];play(channels.indexOf(n));
+}
+
+/* ---------- numara ile kanal ---------- */
+var numBuf='',numT;
+function digit(d){
+  numBuf=(numBuf+d).slice(-4);$('#numbox').textContent=numBuf;$('#numbox').classList.remove('hidden');
+  clearTimeout(numT);numT=setTimeout(function(){
+    var n=parseInt(numBuf,10);numBuf='';$('#numbox').classList.add('hidden');
+    var i=-1;for(var k=0;k<channels.length;k++)if(channels[k].num===n){i=k;break}
+    if(i>=0){play(i);if(mode==='browse')closeBrowse()}
+  },1500);
+}
+
+/* ---------- modlar ---------- */
+function openBrowse(){if(!channels.length){openSet();return}mode='browse';zone='list';
+  if(cur>=0){var i=view.indexOf(channels[cur]);if(i>=0)listIdx=i}
+  $('#browse').classList.remove('hidden');$('#info').classList.remove('hidden');$('#banner').classList.add('side');draw()}
+function closeBrowse(){mode='watch';$('#banner').classList.remove('side');$('#browse').classList.add('hidden');$('#info').classList.add('hidden')}
+var fields=[];
+function openSet(){
+  mode='settings';$('#set').classList.remove('hidden');$('#browse').classList.add('hidden');$('#info').classList.add('hidden');
+  var x=LS.get('x',null);if(x){$('#xs').value=x.s;$('#xu').value=x.u;$('#xp').value=x.p}
+  $('#pxu').value=proxy&&proxy.url?proxy.url:DEFAULT_PROXY;$('#pxk').value=proxy?proxy.key||'':'';
+  fields=[].slice.call(document.querySelectorAll('#set .f'));setIdx=x?fields.indexOf($('#xlogin')):0;markSet();
+}
+function closeSet(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();$('#set').classList.add('hidden');mode='watch';if(!channels.length)$('#splmsg').textContent='Liste yok. Yeşil tuşla ayarları aç.'}
+function markSet(){fields.forEach(function(f,i){f.classList.toggle('foc',i===setIdx)})}
+function login(){
+  var s=$('#xs').value.trim(),u=$('#xu').value.trim(),p=$('#xp').value.trim();
+  if(!s||!u||!p){$('#smsg').textContent='Sunucu, kullanıcı adı ve şifreyi doldur.';return}
+  var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();
+  proxy=pu&&pk?{url:pu,key:pk}:null;LS.set('proxy',proxy);
+  $('#smsg').style.color='#8b93a7';$('#smsg').textContent='Giriş yapılıyor…';
+  xtream(s,u,p).then(function(r){
+    LS.set('x',{s:s,u:u,p:p});applyList(r);$('#smsg').textContent='';closeSet();
+    if(cur<0&&channels.length)play(0);openBrowse();
+  }).catch(function(e){$('#smsg').style.color='#ff8a8a';$('#smsg').textContent='Hata: '+e.message});
+}
+function setOk(){
+  var f=fields[setIdx];
+  if(f.id==='xlogin')login();else if(f.id==='xclose')closeSet();
+  else if(f.id==='xclear'){try{localStorage.clear()}catch(e){}location.reload()}
+  else{f.removeAttribute('readonly');f.focus();try{f.setSelectionRange(f.value.length,f.value.length)}catch(e){}}
+}
+function search(){var q=$('#sq');q.value=query;q.classList.remove('hidden');q.focus()}
+function endSearch(apply){var q=$('#sq');if(apply){query=q.value.trim();filter();zone='list'}q.classList.add('hidden');q.blur();draw()}
+
+/* ---------- kumanda ---------- */
+var K={UP:38,DOWN:40,LEFT:37,RIGHT:39,OK:13,BACK:[8,27,461,10009,166,4],CHUP:[33,427],CHDN:[34,428],RED:403,GREEN:404,YELLOW:405,BLUE:406,INFO:457};
+function isBack(k){return K.BACK.indexOf(k)>=0}
+document.addEventListener('keydown',function(e){
+  var k=e.keyCode,ae=document.activeElement,typing=ae&&ae.tagName==='INPUT'&&!ae.readOnly;
+  if(typing&&ae.id==='sq'){
+    if(k===K.OK){endSearch(true);e.preventDefault()}
+    else if(k===27||k===461||k===10009||k===K.UP||k===K.DOWN){endSearch(false);e.preventDefault()}
+    return;
+  }
+  if(typing){
+    if(k===K.OK||k===K.UP||k===K.DOWN||k===27||k===461||k===10009){ae.blur();ae.readOnly=true;if(k===K.UP)setIdx=Math.max(0,setIdx-1);if(k===K.DOWN||k===K.OK)setIdx=Math.min(fields.length-1,setIdx+1);markSet();e.preventDefault()}
+    return;
+  }
+  var d=k>=48&&k<=57?k-48:(k>=96&&k<=105?k-96:-1);
+  if(d>=0&&mode!=='settings'){digit(d);e.preventDefault();return}
+  if(k===K.GREEN){mode==='settings'?closeSet():openSet();e.preventDefault();return}
+  if(mode==='settings'){
+    if(k===K.UP||k===K.LEFT)setIdx=Math.max(0,setIdx-1);
+    else if(k===K.DOWN||k===K.RIGHT)setIdx=Math.min(fields.length-1,setIdx+1);
+    else if(k===K.OK)setOk();
+    else if(isBack(k)){if(channels.length)closeSet()}
+    else return;
+    markSet();e.preventDefault();return;
+  }
+  if(mode==='watch'){
+    if(k===K.UP||K.CHUP.indexOf(k)>=0)zap(1);
+    else if(k===K.DOWN||K.CHDN.indexOf(k)>=0)zap(-1);
+    else if(k===K.OK){if(vid.paused&&vid.currentSrc)vid.play().catch(function(){});openBrowse()}
+    else if(k===K.LEFT||k===K.RIGHT||k===K.BLUE)openBrowse();
+    else if(k===K.INFO||k===K.YELLOW)banner('');
+    else if(isBack(k)){openBrowse()}
+    else return;
+    e.preventDefault();return;
+  }
+  // browse
+  if(K.CHUP.indexOf(k)>=0){if(zone==='list'){listIdx=Math.max(0,listIdx-ROWS)}else catIdx=Math.max(0,catIdx-CROWS);}
+  else if(K.CHDN.indexOf(k)>=0){if(zone==='list'){listIdx=Math.min(view.length-1,listIdx+ROWS)}else catIdx=Math.min(cats.length-1,catIdx+CROWS);}
+  else if(k===K.UP){if(zone==='list')listIdx=listIdx>0?listIdx-1:view.length-1;else{catIdx=catIdx>0?catIdx-1:cats.length-1;query='';filter();zone='cats'}}
+  else if(k===K.DOWN){if(zone==='list')listIdx=listIdx<view.length-1?listIdx+1:0;else{catIdx=catIdx<cats.length-1?catIdx+1:0;query='';filter();zone='cats'}}
+  else if(k===K.LEFT){zone='cats'}
+  else if(k===K.RIGHT){if(view.length)zone='list'}
+  else if(k===K.OK){if(zone==='cats'){if(view.length)zone='list'}else if(view[listIdx]){var c=view[listIdx];if(channels[cur]===c)closeBrowse();else play(channels.indexOf(c))}}
+  else if(k===K.RED){var c2=view[listIdx];if(zone==='list'&&c2){favs.has(c2.id)?favs.delete(c2.id):favs.add(c2.id);LS.set('tvfavs',Array.from(favs));if(cats[catIdx]==='★ Favoriler'){var keep=listIdx;filter();listIdx=Math.min(keep,view.length-1)}}}
+  else if(k===K.YELLOW){search();e.preventDefault();return}
+  else if(isBack(k)){if(query){query='';filter()}else if(cur>=0)closeBrowse()}
+  else if(k===K.BLUE||k===K.INFO){closeBrowse();banner('')}
+  else return;
+  if(listIdx<0)listIdx=0;
+  e.preventDefault();if(mode==='browse')draw();
+});
+
+/* fare / test için tıklama */
+document.addEventListener('click',function(e){
+  var t=e.target.closest?e.target.closest('[data-i],[data-c],.f'):null;
+  if(!t){if(mode==='watch')openBrowse();return}
+  if(t.hasAttribute('data-c')){catIdx=+t.getAttribute('data-c');query='';filter();zone='cats';draw()}
+  else if(t.hasAttribute('data-i')){listIdx=+t.getAttribute('data-i');zone='list';var c=view[listIdx];if(c)play(channels.indexOf(c))}
+  else if(mode==='settings'){setIdx=fields.indexOf(t);markSet();setOk()}
+});
+
+/* ---------- başlangıç ---------- */
+(function init(){
+  var x=LS.get('x',null);
+  if(!x){$('#splmsg').textContent='Hoş geldin';openSet();return}
+  $('#splmsg').textContent='Kanallar yükleniyor…';
+  xtream(x.s,x.u,x.p).then(function(r){
+    applyList(r);
+    var last=LS.get('tvlast',null),i=-1;
+    for(var k=0;k<channels.length;k++)if(channels[k].id===last){i=k;break}
+    play(i>=0?i:0);
+  }).catch(function(e){openSet();$('#smsg').textContent='Hata: '+e.message});
+})();
+</script>
+</body>
+</html>
