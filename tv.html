@@ -129,7 +129,8 @@ function imgUrl(u){return (location.protocol==='https:'&&/^http:/i.test(u)&&prox
 /* ---------- Xtream ---------- */
 function fetchText(u){return fetch(u).then(function(r){return r.text().then(function(t){return {status:r.status,text:t}})})}
 function xtream(server,user,pass){
-  server=server.trim().replace(/\/+$/,'');if(!/^https?:\/\//i.test(server))server='http://'+server;
+  server=server.trim().replace(/\s+/g,'');if(!/^https?:\/\//i.test(server))server='http://'+server;
+  try{var su=new URL(server);server=su.protocol+'//'+su.host}catch(e){}
   var api=function(a){return server+'/player_api.php?username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass)+(a?'&action='+a:'')};
   var useProxy=false;
   function get(a){
@@ -146,7 +147,9 @@ function xtream(server,user,pass){
   }
   return get('').then(function(info){
     var ui=info&&info.user_info;
-    if(!ui)throw new Error('Bu adres Xtream sunucusu gibi yanıt vermedi.');
+    var via=useProxy?' [proxy üzerinden]':' [doğrudan]';
+    if(Array.isArray(info)&&!info.length)throw new Error('Sunucu boş yanıt verdi ([]). Bu genelde kullanıcı adı/şifre hatalı demek ya da sağlayıcı bu bağlantıyı reddediyor.'+via);
+    if(!ui)throw new Error('Bu adres Xtream sunucusu gibi yanıt vermedi'+via+'. Sunucunun yanıtı: '+JSON.stringify(info).slice(0,120));
     if(String(ui.auth)==='0')throw new Error('Sunucu girişi reddetti (auth=0): kullanıcı adı veya şifre hatalı'+(ui.message?' — '+ui.message:'')+(useProxy?' (proxy üzerinden denendi; sağlayıcı Cloudflare\'i engelliyor olabilir)':'')+'.');
     if(ui.status&&ui.status!=='Active'){var ex=ui.exp_date?new Date(ui.exp_date*1000).toLocaleDateString('tr-TR'):'?';throw new Error('Hesap durumu: '+ui.status+' (bitiş: '+ex+').')}
     return Promise.all([get('get_live_categories'),get('get_live_streams')]);
