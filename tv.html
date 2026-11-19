@@ -271,12 +271,15 @@ function openSet(){
   fields=[].slice.call(document.querySelectorAll('#set .f'));setIdx=x?fields.indexOf($('#xlogin')):0;markSet();
 }
 function closeSet(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();$('#set').classList.add('hidden');mode='watch';if(!channels.length)$('#splmsg').textContent='Liste yok. Yeşil tuşla ayarları aç.'}
+function saveDraft(){var x={s:$('#xs').value.trim(),u:$('#xu').value.trim(),p:$('#xp').value.trim()};if(x.s||x.u||x.p)LS.set('x',x);var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();if(pu&&pk){proxy={url:pu,key:pk};LS.set('proxy',proxy)}}
+document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('#set'))saveDraft()});
 function markSet(){fields.forEach(function(f,i){f.classList.toggle('foc',i===setIdx)})}
 function login(){
   var s=$('#xs').value.trim(),u=$('#xu').value.trim(),p=$('#xp').value.trim();
   if(!s||!u||!p){$('#smsg').textContent='Sunucu, kullanıcı adı ve şifreyi doldur.';return}
   var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();
   proxy=pu&&pk?{url:pu,key:pk}:null;LS.set('proxy',proxy);
+  LS.set('x',{s:s,u:u,p:p});
   $('#smsg').style.color='#8b93a7';$('#smsg').textContent='Giriş yapılıyor…';
   xtream(s,u,p).then(function(r){
     LS.set('x',{s:s,u:u,p:p});applyList(r);$('#smsg').textContent='';closeSet();
