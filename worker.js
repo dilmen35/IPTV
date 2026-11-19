@@ -9,7 +9,10 @@ export default {
     const target=url.searchParams.get('u');
     if(!target||!/^https?:\/\//i.test(target))return new Response('u gerekli',{status:400,headers:CORS});
     const h=new Headers();
-    for(const n of ['range','user-agent'])if(req.headers.get(n))h.set(n,req.headers.get(n));
+    if(req.headers.get('range'))h.set('range',req.headers.get('range'));
+    // Bazı sağlayıcılar tarayıcıları reddeder; kendimizi VLC olarak tanıtıyoruz
+    h.set('user-agent',url.searchParams.get('ua')||'VLC/3.0.20 LibVLC/3.0.20');
+    h.set('accept','*/*');
     let r;
     try{r=await fetch(target,{headers:h,redirect:'follow'})}catch(e){return new Response('hedefe ulaşılamadı: '+e.message,{status:502,headers:CORS})}
     const ct=r.headers.get('content-type')||'';

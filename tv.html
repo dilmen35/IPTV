@@ -141,7 +141,14 @@ function xtream(server,user,pass){
       useProxy=true;
       return fetchText(viaProxy(u)).catch(function(){throw new Error('Proxy üzerinden de bağlanılamadı.')});
     }).then(function(r){
-      if(r.status===401&&useProxy)throw new Error('Proxy anahtarı hatalı.');
+      // doğrudan bağlantı reddedildiyse (sağlayıcı tarayıcıyı engelliyor olabilir) proxy ile tekrar dene
+      if(!useProxy&&proxy&&proxy.url&&(r.status===401||r.status===403||/INVALID_AUTH|"auth":\s*"?0|^\s*\[\s*\]\s*$/.test(r.text))){
+        useProxy=true;
+        return fetchText(viaProxy(u)).catch(function(){throw new Error('Proxy üzerinden bağlanılamadı.')});
+      }
+      return r;
+    }).then(function(r){
+      if(r.status===401&&useProxy&&r.text.trim()==='yetkisiz')throw new Error('Proxy anahtarı hatalı.');
       try{return JSON.parse(r.text)}catch(e){throw new Error('Sunucu beklenmeyen yanıt verdi (HTTP '+r.status+'): '+r.text.replace(/\s+/g,' ').slice(0,90))}
     });
   }
@@ -149,6 +156,7 @@ function xtream(server,user,pass){
     var ui=info&&info.user_info;
     var via=useProxy?' [proxy üzerinden]':' [doğrudan]';
     if(Array.isArray(info)&&!info.length)throw new Error('Sunucu boş yanıt verdi ([]). Bu genelde kullanıcı adı/şifre hatalı demek ya da sağlayıcı bu bağlantıyı reddediyor.'+via);
+    if(info&&info.error==='INVALID_AUTH')throw new Error('Sağlayıcı girişi reddetti (INVALID_AUTH)'+via+'.');
     if(!ui)throw new Error('Bu adres Xtream sunucusu gibi yanıt vermedi'+via+'. Sunucunun yanıtı: '+JSON.stringify(info).slice(0,120));
     if(String(ui.auth)==='0')throw new Error('Sunucu girişi reddetti (auth=0): kullanıcı adı veya şifre hatalı'+(ui.message?' — '+ui.message:'')+(useProxy?' (proxy üzerinden denendi; sağlayıcı Cloudflare\'i engelliyor olabilir)':'')+'.');
     if(ui.status&&ui.status!=='Active'){var ex=ui.exp_date?new Date(ui.exp_date*1000).toLocaleDateString('tr-TR'):'?';throw new Error('Hesap durumu: '+ui.status+' (bitiş: '+ex+').')}
