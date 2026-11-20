@@ -115,6 +115,8 @@ var channels=[],cats=[],view=[],favs=new Set(LS.get('tvfavs',[]));
 var cur=-1,hls=null,retries=0;
 var proxy=LS.get('proxy',null);          // {url,key}
 var direct=LS.get('tvdirect',true);      // sunucuya doğrudan ulaşılabiliyor mu
+var EV=!!window.EV_SUNUCU;               // sayfa evdeki tabletten açıldı
+if(EV){proxy={url:location.origin,key:'ev'};direct=false}
 var DEFAULT_PROXY='https://iptv-proxy.dilmenseref.workers.dev';
 var mode='watch';                        // watch | browse | settings
 var zone='list', catIdx=0, listIdx=0, listTop=0, setIdx=0, query='';
@@ -132,7 +134,7 @@ function xtream(server,user,pass){
   server=server.trim().replace(/\s+/g,'');if(!/^https?:\/\//i.test(server))server='http://'+server;
   try{var su=new URL(server);server=su.protocol+'//'+su.host}catch(e){}
   var api=function(a){return server+'/player_api.php?username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass)+(a?'&action='+a:'')};
-  var useProxy=false;
+  var useProxy=EV;
   function get(a){
     var u=api(a);
     var tryDirect=useProxy?Promise.reject('skip'):fetchText(u);
@@ -172,7 +174,7 @@ function xtream(server,user,pass){
   });
 }
 function applyList(r){
-  channels=r.list;direct=r.direct;LS.set('tvdirect',direct);
+  channels=r.list;direct=EV?false:r.direct;LS.set('tvdirect',direct);
   var seen={};cats=['Tümü','★ Favoriler'];
   r.order.concat(channels.map(function(c){return c.group})).forEach(function(g){if(!seen[g]&&channels.some(function(c){return c.group===g})){seen[g]=1;cats.push(g)}});
   catIdx=0;filter();
@@ -267,18 +269,18 @@ var fields=[];
 function openSet(){
   mode='settings';$('#set').classList.remove('hidden');$('#browse').classList.add('hidden');$('#info').classList.add('hidden');
   var x=LS.get('x',null);if(x){$('#xs').value=x.s;$('#xu').value=x.u;$('#xp').value=x.p}
-  $('#pxu').value=proxy&&proxy.url?proxy.url:DEFAULT_PROXY;$('#pxk').value=proxy?proxy.key||'':'';
+  $('#pxu').value=EV?'(tablet sunucusu kullanılıyor)':proxy&&proxy.url?proxy.url:DEFAULT_PROXY;$('#pxk').value=proxy?proxy.key||'':'';
   fields=[].slice.call(document.querySelectorAll('#set .f'));setIdx=x?fields.indexOf($('#xlogin')):0;markSet();
 }
 function closeSet(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();$('#set').classList.add('hidden');mode='watch';if(!channels.length)$('#splmsg').textContent='Liste yok. Yeşil tuşla ayarları aç.'}
-function saveDraft(){var x={s:$('#xs').value.trim(),u:$('#xu').value.trim(),p:$('#xp').value.trim()};if(x.s||x.u||x.p)LS.set('x',x);var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();if(pu&&pk){proxy={url:pu,key:pk};LS.set('proxy',proxy)}}
+function saveDraft(){var x={s:$('#xs').value.trim(),u:$('#xu').value.trim(),p:$('#xp').value.trim()};if(x.s||x.u||x.p)LS.set('x',x);if(EV)return;var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();if(pu&&pk){proxy={url:pu,key:pk};LS.set('proxy',proxy)}}
 document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('#set'))saveDraft()});
 function markSet(){fields.forEach(function(f,i){f.classList.toggle('foc',i===setIdx)})}
 function login(){
   var s=$('#xs').value.trim(),u=$('#xu').value.trim(),p=$('#xp').value.trim();
   if(!s||!u||!p){$('#smsg').textContent='Sunucu, kullanıcı adı ve şifreyi doldur.';return}
   var pu=$('#pxu').value.trim().replace(/\/+$/,''),pk=$('#pxk').value.trim();
-  proxy=pu&&pk?{url:pu,key:pk}:null;LS.set('proxy',proxy);
+  if(!EV){proxy=pu&&pk?{url:pu,key:pk}:null;LS.set('proxy',proxy)}
   LS.set('x',{s:s,u:u,p:p});
   $('#smsg').style.color='#8b93a7';$('#smsg').textContent='Giriş yapılıyor…';
   xtream(s,u,p).then(function(r){
@@ -358,6 +360,13 @@ document.addEventListener('click',function(e){
 
 /* ---------- başlangıç ---------- */
 (function init(){
+  if(EV&&!LS.get('x',null)){
+    fetch('/ayar.json').then(function(r){return r.json()}).then(function(c){if(c&&c.s&&c.u&&c.p)LS.set('x',c)}).catch(function(){}).then(start);
+    return;
+  }
+  start();
+})();
+function start(){
   var x=LS.get('x',null);
   if(!x){$('#splmsg').textContent='Hoş geldin';openSet();return}
   $('#splmsg').textContent='Kanallar yükleniyor…';
@@ -367,7 +376,7 @@ document.addEventListener('click',function(e){
     for(var k=0;k<channels.length;k++)if(channels[k].id===last){i=k;break}
     play(i>=0?i:0);
   }).catch(function(e){openSet();$('#smsg').textContent='Hata: '+e.message});
-})();
+}
 </script>
 </body>
 </html>
