@@ -8,6 +8,7 @@ import http.server, socketserver, urllib.request, urllib.parse, urllib.error, js
 PORT = 8080
 DIR = os.path.dirname(os.path.abspath(__file__))
 CONF = os.path.expanduser('~/.iptv.json')
+VERI = os.path.expanduser('~/.iptv_veri.json')   # izleme geçmişi ve favoriler
 UA = 'VLC/3.0.20 LibVLC/3.0.20'
 TV_URL = 'https://raw.githubusercontent.com/dilmen35/IPTV/main/tv.html'
 KUMANDA_URL = 'https://raw.githubusercontent.com/dilmen35/IPTV/main/kumanda.html'
@@ -53,6 +54,18 @@ def yerel_ip():
 
 
 CFG = ayar()
+try:
+    with open(VERI, encoding='utf8') as f:
+        DATA = json.load(f)
+except Exception:
+    DATA = {}
+
+
+def veri_kaydet():
+    tmp = VERI + '.tmp'
+    with open(tmp, 'w', encoding='utf8') as f:
+        json.dump(DATA, f, ensure_ascii=False)
+    os.replace(tmp, VERI)
 PAGE = indir(TV_URL, 'tv.html').replace(b'<head>', b'<head><script>window.EV_SUNUCU=1</script>', 1)
 KUMANDA = indir(KUMANDA_URL, 'kumanda.html')
 
@@ -79,6 +92,21 @@ class H(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_POST(self):
+        if urllib.parse.urlparse(self.path).path != '/veri':
+            return self.basit(404, 'yok')
+        try:
+            n = int(self.headers.get('Content-Length') or 0)
+            yeni = json.loads(self.rfile.read(n).decode('utf8') or '{}')
+            if not isinstance(yeni, dict):
+                raise ValueError('sözlük değil')
+        except Exception as e:
+            return self.basit(400, 'hatalı veri: %s' % e)
+        with KILIT:
+            DATA.update(yeni)
+            veri_kaydet()
+        return self.basit(200, 'ok')
+
     def do_OPTIONS(self):
         self.send_response(204); self.cors(); self.send_header('Content-Length', '0'); self.end_headers()
 
@@ -102,6 +130,10 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.olaylar()
         if url.path in ('/kumanda', '/kumanda.html', '/k.html'):
             return self.basit(200, KUMANDA, 'text/html; charset=utf-8')
+        if url.path == '/veri.json':
+            with KILIT:
+                body = json.dumps(DATA, ensure_ascii=False)
+            return self.basit(200, body, 'application/json; charset=utf-8')
         if url.path == '/ayar.json':
             return self.basit(200, json.dumps(CFG), 'application/json')
         if url.path in ('/', '/tv', '/tv.html', '/index.html'):

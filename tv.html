@@ -249,7 +249,25 @@ body.ptr #obar b{width:1.6rem;height:1.6rem;margin:-.8rem 0 0 -.8rem}
 <script>
 /* ================= yardımcılar ================= */
 var $=function(s){return document.querySelector(s)};
-var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}if(window.EV_SUNUCU&&SYNC[k])tabletKaydet(k,v)}};
+/* izleme geçmişi, favoriler ve son kanal tablette de saklanır (adres değişse de kaybolmaz) */
+var SYNC={resume:1,favm:1,favs2:1,tvfavs:1,tvlast:1},bekleyen={},kayitT;
+function tabletKaydet(k,v){bekleyen[k]=v;clearTimeout(kayitT);kayitT=setTimeout(function(){var b=bekleyen;bekleyen={};fetch('/veri',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(function(){for(var x in b)if(!(x in bekleyen))bekleyen[x]=b[x]})},1500)}
+function tablettenYukle(){
+  return fetch('/veri.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    d=d||{};var yukle={};
+    for(var k in SYNC){
+      var yerel=LS.get(k,null);
+      if(d[k]==null){if(yerel!=null)yukle[k]=yerel;continue}
+      var v=d[k];
+      if(k==='resume'&&yerel){for(var r in yerel)if(!v[r]||yerel[r].ts>v[r].ts){v[r]=yerel[r];yukle[k]=v}}
+      try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}
+    }
+    for(var y in yukle)tabletKaydet(y,yukle[y]);
+    resume=LS.get('resume',{});favM=LS.get('favm',{});favS=LS.get('favs2',{});LIVE.favs=new Set(LS.get('tvfavs',[]));
+  }).catch(function(){});
+}
+addEventListener('beforeunload',function(){if(window.EV_SUNUCU&&Object.keys(bekleyen).length&&navigator.sendBeacon)navigator.sendBeacon('/veri',new Blob([JSON.stringify(bekleyen)],{type:'application/json'}))});
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
 function b64(s){try{return decodeURIComponent(escape(atob(s||'')))}catch(e){return s||''}}
 function hm(ts){var d=new Date(ts*1000);return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
@@ -958,8 +976,9 @@ addEventListener('beforeunload',function(){saveVodPos()});
 
 /* ================= başlangıç ================= */
 (function init(){
-  if(EV&&!LS.get('x',null)){
-    fetch('/ayar.json').then(function(r){return r.json()}).then(function(c){if(c&&c.s&&c.u&&c.p)LS.set('x',c)}).catch(function(){}).then(start);
+  if(EV){
+    var a=LS.get('x',null)?Promise.resolve():fetch('/ayar.json').then(function(r){return r.json()}).then(function(c){if(c&&c.s&&c.u&&c.p)LS.set('x',c)}).catch(function(){});
+    Promise.all([a,tablettenYukle()]).then(start);
     return;
   }
   start();
