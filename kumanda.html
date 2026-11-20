@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8"><title>IPTV Kumanda</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0e1015"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;background:#0e1015;color:#eef1f7;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:manipulation}
+body{padding:14px 16px calc(16px + env(safe-area-inset-bottom));max-width:440px;margin:auto}
+h1{font-size:17px;margin:0 0 10px;color:#8d95a8;font-weight:600;display:flex;justify-content:space-between}
+#st{font-size:13px}
+button{font:inherit;color:inherit;border:0;background:#1b1f29;border-radius:16px;font-size:17px;font-weight:600;padding:0;cursor:pointer}
+button:active{background:#4f8cff}
+.row{display:grid;gap:10px;margin-bottom:10px}
+.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1fr 1fr 1fr}.r4{grid-template-columns:repeat(4,1fr)}
+.row button{height:56px}
+#pad{position:relative;width:276px;height:276px;margin:8px auto 14px}
+#pad button{position:absolute;width:84px;height:84px;font-size:28px}
+#u{left:96px;top:0}#d{left:96px;bottom:0}#l{left:0;top:96px}#r{right:0;top:96px}
+#ok{left:93px;top:93px;width:90px!important;height:90px!important;border-radius:50%;background:#4f8cff;font-size:22px!important}
+#ok:active{background:#7c5cff}
+.c{height:36px!important;border-radius:12px}
+#s{display:flex;gap:8px;margin-top:6px}
+#s input{flex:1;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:1px solid #2c3242;background:#151820;color:#eef1f7;outline:none;user-select:text;-webkit-user-select:text}
+#s button{padding:0 18px}
+.lab{font-size:12px;color:#5d6578;text-align:center;margin:-4px 0 8px}
+</style></head><body>
+<h1>IPTV Kumanda <span id="st">●</span></h1>
+<div class="row r3"><button data-k="1001">☰ Menü</button><button data-k="461">↩ Geri</button><button data-k="457">ℹ Bilgi</button></div>
+<div id="pad">
+<button id="u" data-k="38">▲</button><button id="l" data-k="37">◄</button><button id="ok" data-k="13">OK</button><button id="r" data-k="39">►</button><button id="d" data-k="40">▼</button>
+</div>
+<div class="row r2"><button data-k="33">CH +</button><button data-k="34">CH −</button></div>
+<div class="row r3"><button data-k="412">⏪ 10 sn</button><button data-k="179">⏯</button><button data-k="417">30 sn ⏩</button></div>
+<div class="row r4"><button class="c" data-k="403" style="background:#c62f3e">Favori</button><button class="c" data-k="404" style="background:#2a9a3c">Ayar</button><button class="c" data-k="405" style="background:#c9a21f;color:#111">Ara</button><button class="c" data-k="406" style="background:#2f62c6">Liste</button></div>
+<div class="row r3"><button data-k="49">1</button><button data-k="50">2</button><button data-k="51">3</button><button data-k="52">4</button><button data-k="53">5</button><button data-k="54">6</button><button data-k="55">7</button><button data-k="56">8</button><button data-k="57">9</button><span></span><button data-k="48">0</button><span></span></div>
+<div class="lab">Rakamlar: kanal numarası</div>
+<form id="s"><input id="q" placeholder="Kanal / film / dizi ara" autocomplete="off"><button>Ara</button></form>
+<script>
+var st=document.getElementById('st');
+function send(q){fetch('/k?'+q,{cache:'no-store'}).then(function(r){st.style.color=r.ok?'#3ccf6b':'#ff5a6e'}).catch(function(){st.style.color='#ff5a6e'})}
+var rep=null;
+function down(e){var b=e.target.closest('[data-k]');if(!b)return;e.preventDefault();var k=b.getAttribute('data-k');send('c='+k);if(navigator.vibrate)navigator.vibrate(15);
+  if('37 38 39 40 412 417'.indexOf(k)>=0){clearInterval(rep);var t0=setTimeout(function(){rep=setInterval(function(){send('c='+k)},140)},450);rep=t0}}
+function up(){clearTimeout(rep);clearInterval(rep);rep=null}
+document.addEventListener('touchstart',down,{passive:false});document.addEventListener('touchend',up);document.addEventListener('touchcancel',up);
+document.addEventListener('mousedown',function(e){if(!('ontouchstart' in window))down(e)});document.addEventListener('mouseup',up);
+document.getElementById('s').onsubmit=function(e){e.preventDefault();var v=document.getElementById('q').value;send('t='+encodeURIComponent(v));document.getElementById('q').blur()};
+send('c=0');
+</script></body></html>

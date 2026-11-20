@@ -3,13 +3,16 @@
 # TV sayfasını sunar ve IPTV sağlayıcısına bu evin internetinden, VLC gibi görünerek bağlanır.
 # Kullanım:  python tablet.py            (ilk açılışta sunucu/kullanıcı/şifre sorar)
 #            python tablet.py --sifirla  (kayıtlı bilgileri yeniden gir)
-import http.server, socketserver, urllib.request, urllib.parse, urllib.error, json, os, sys, socket, re
+import http.server, socketserver, urllib.request, urllib.parse, urllib.error, json, os, sys, socket, re, queue, threading
 
 PORT = 8080
 DIR = os.path.dirname(os.path.abspath(__file__))
 CONF = os.path.expanduser('~/.iptv.json')
 UA = 'VLC/3.0.20 LibVLC/3.0.20'
 TV_URL = 'https://raw.githubusercontent.com/dilmen35/IPTV/main/tv.html'
+KUMANDA_URL = 'https://raw.githubusercontent.com/dilmen35/IPTV/main/kumanda.html'
+DINLEYENLER = []          # TV sayfalarının olay kuyrukları
+KILIT = threading.Lock()
 
 
 def ayar():
@@ -26,17 +29,17 @@ def ayar():
     return c
 
 
-def tv_sayfasi():
-    yerel = os.path.join(DIR, 'tv.html')
+def indir(url, ad):
+    yerel = os.path.join(DIR, ad)
     try:  # her açılışta güncel sürümü indir
-        with urllib.request.urlopen(TV_URL, timeout=15) as r:
+        with urllib.request.urlopen(url, timeout=15) as r:
             data = r.read()
         with open(yerel, 'wb') as f:
             f.write(data)
     except Exception as e:
-        print('  (TV sayfası güncellenemedi, kayıtlı sürüm kullanılacak:', e, ')')
+        print('  (%s güncellenemedi, kayıtlı sürüm kullanılacak: %s)' % (ad, e))
     with open(yerel, 'rb') as f:
-        return f.read().replace(b'<head>', b'<head><script>window.EV_SUNUCU=1</script>', 1)
+        return f.read()
 
 
 def yerel_ip():
@@ -50,7 +53,8 @@ def yerel_ip():
 
 
 CFG = ayar()
-PAGE = tv_sayfasi()
+PAGE = indir(TV_URL, 'tv.html').replace(b'<head>', b'<head><script>window.EV_SUNUCU=1</script>', 1)
+KUMANDA = indir(KUMANDA_URL, 'kumanda.html')
 
 
 class H(http.server.BaseHTTPRequestHandler):
@@ -83,11 +87,53 @@ class H(http.server.BaseHTTPRequestHandler):
         q = urllib.parse.parse_qs(url.query)
         if 'u' in q:
             return self.aktar(q['u'][0])
+        if url.path == '/k':
+            ol = {}
+            if 'c' in q: ol['k'] = int(q['c'][0])
+            if 't' in q: ol['t'] = q['t'][0]
+            if ol.get('k') != 0:
+                with KILIT:
+                    for d in list(DINLEYENLER):
+                        d.put(ol)
+            with KILIT:
+                n = len(DINLEYENLER)
+            return self.basit(200 if n else 503, 'ok' if n else 'TV bağlı değil')
+        if url.path == '/olay':
+            return self.olaylar()
+        if url.path in ('/kumanda', '/kumanda.html', '/k.html'):
+            return self.basit(200, KUMANDA, 'text/html; charset=utf-8')
         if url.path == '/ayar.json':
             return self.basit(200, json.dumps(CFG), 'application/json')
         if url.path in ('/', '/tv', '/tv.html', '/index.html'):
             return self.basit(200, PAGE, 'text/html; charset=utf-8')
         return self.basit(404, 'yok')
+
+    def olaylar(self):
+        kuyruk = queue.Queue()
+        with KILIT:
+            DINLEYENLER.append(kuyruk)
+        try:
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Connection', 'close')
+            self.cors()
+            self.end_headers()
+            self.close_connection = True
+            self.wfile.write(b': merhaba\n\n'); self.wfile.flush()
+            while True:
+                try:
+                    ol = kuyruk.get(timeout=15)
+                    self.wfile.write(('data: %s\n\n' % json.dumps(ol)).encode('utf8'))
+                except queue.Empty:
+                    self.wfile.write(b': canli\n\n')
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            with KILIT:
+                if kuyruk in DINLEYENLER:
+                    DINLEYENLER.remove(kuyruk)
 
     def aktar(self, hedef):
         if not hedef.startswith(('http://', 'https://')):
@@ -159,6 +205,7 @@ if __name__ == '__main__':
     print('\n==============================================')
     print('  IPTV ev sunucusu çalışıyor.')
     print('  TV tarayıcısında aç:  http://%s:%d' % (ip, PORT))
+    print('  Telefonda kumanda:    http://%s:%d/kumanda' % (ip, PORT))
     print('  Durdurmak için: Ctrl+C  (ya da Termux\'u kapat)')
     print('==============================================\n')
     S(('0.0.0.0', PORT), H).serve_forever()

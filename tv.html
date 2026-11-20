@@ -834,7 +834,11 @@ function keyTracks(k){
 }
 
 document.addEventListener('keydown',function(e){onKey(e.keyCode,e)});
-function onKey(k,e){
+/* rakam tuşlarıyla gezinme: 2▲ 8▼ 4◄ 6► 5=OK 0=Geri (canlı yayın izlerken rakamlar kanal numarasıdır) */
+var NAV={50:38,56:40,52:37,54:39,53:13,48:461,98:38,104:40,100:37,102:39,101:13,96:461};
+function onKey(k,e,uzak){
+  if(k===1001){if(screen==='menu'){if(!leaveMenuToPlayer())openMenu()}else if(screen==='player'||screen==='boot')openMenu(playing&&playing.kind==='vod'?sec:'live');else if(screen==='detail')closeDetail();else if(screen==='tracks')closeTracks();e.preventDefault();return}
+  if(!uzak&&NAV[k]&&!(screen==='player'&&playing&&playing.kind==='live')&&!(document.activeElement&&document.activeElement.tagName==='INPUT'&&!document.activeElement.readOnly)){k=NAV[k]}
   var ae=document.activeElement,typing=ae&&ae.tagName==='INPUT'&&!ae.readOnly;
   if(typing&&ae.id==='sq'){
     if(k===K.OK){endSearch(true);e.preventDefault()}
@@ -936,6 +940,19 @@ document.addEventListener('click',function(e){
   else if(screen==='settings'){setIdx=fields.indexOf(t);markSet();setOk()}
 });
 /* Geri tuşu tarayıcıda "önceki sayfa" yapıyorsa yakala */
+/* telefon kumandası (tablet sunucusu üzerinden) */
+function remoteText(t){
+  if(screen!=='menu')openMenu(sec);
+  if(sec==='live'){LIVE.query=t;liveFilter();zone='items';drawMenu()}
+  else{var V=curV();zone='items';if(t)vodSearch(V,t);else selectVodCat(V,V.cat)}
+}
+if(EV&&window.EventSource){(function bag(){
+  var es=new EventSource('/olay');
+  es.onmessage=function(m){var o;try{o=JSON.parse(m.data)}catch(x){return}
+    if(o.t!=null)remoteText(o.t);
+    if(o.k){if(screen==='player'&&playing&&playing.kind==='vod'&&(o.k===37||o.k===39||o.k===179))$('#pbar').classList.add('hidden');onKey(o.k,{preventDefault:function(){}},true)}};
+  es.onerror=function(){es.close();setTimeout(bag,3000)};
+})()}
 try{history.pushState({iptv:1},'');addEventListener('popstate',function(){history.pushState({iptv:1},'');onKey(461,{preventDefault:function(){}})})}catch(e){}
 addEventListener('beforeunload',function(){saveVodPos()});
 
